@@ -62,7 +62,7 @@
             width: 100px; 
             cursor: text; 
             text-align: center; 
-            transition: 0.2s; /* 輸入框保留動畫沒問題 */
+            transition: 0.2s;
             touch-action: manipulation;
         }
 
@@ -75,12 +75,11 @@
             background: white;
             color: var(--dark);
             cursor: pointer;
-            text-align: left !important;      /* 強制靠左 */
+            text-align: left !important;
             text-align-last: left !important;
-            -webkit-appearance: menulist !important; /* 強制呼叫系統原生選單 */
+            -webkit-appearance: menulist !important;
             appearance: menulist !important;
             touch-action: manipulation;
-            /* ❌ 絕對不能加上 transition，會導致安卓選單閃退 */
         }
 
         select:disabled, input[type="number"]:disabled { 
@@ -131,53 +130,6 @@
         .advice-box { background: #f4faff; border-left: 5px solid var(--primary); padding: 15px; border-radius: 8px; margin: 20px 0; text-align: left; line-height: 1.6; }
         .failure-box { background: #fff5f5; border-left: 5px solid var(--danger); padding: 15px; border-radius: 8px; margin: 20px 0; text-align: left; line-height: 1.6; }
 
-        /* ==================== 計算紙專屬樣式 ==================== */
-        #fab-scratchpad {
-            position: fixed; bottom: 25px; right: 25px; width: 65px; height: 65px;
-            background: #fff; border: 3px solid var(--primary); border-radius: 50%;
-            font-size: 30px; display: flex; justify-content: center; align-items: center;
-            cursor: pointer; box-shadow: 0 6px 15px rgba(0,0,0,0.15); z-index: 8000;
-            transition: transform 0.2s; padding-bottom: 2px;
-        }
-        #fab-scratchpad:active { transform: scale(0.9); }
-        #fab-scratchpad:hover { transform: scale(1.05); }
-
-        .fab-hint {
-            position: absolute; right: 85px; top: 50%; transform: translateY(-50%);
-            background: var(--warning); color: white; font-size: 0.95rem; font-weight: bold;
-            padding: 8px 14px; border-radius: 12px; white-space: nowrap; line-height: 1.4;
-            text-align: right; pointer-events: none; box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-            animation: floatLeftRight 1.5s infinite alternate ease-in-out;
-        }
-        .fab-hint::after {
-            content: ''; position: absolute; right: -8px; top: 50%; transform: translateY(-50%);
-            border-width: 8px 0 8px 8px; border-style: solid; border-color: transparent transparent transparent var(--warning);
-        }
-        @keyframes floatLeftRight {
-            0% { transform: translateY(-50%) translateX(0); }
-            100% { transform: translateY(-50%) translateX(-8px); }
-        }
-
-        #sp-container {
-            position: fixed; top: 15%; left: 50%; transform: translateX(-50%);
-            width: 320px; height: 380px; background: white; border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 9000;
-            display: flex; flex-direction: column; overflow: hidden;
-            border: 2px solid #ddd; resize: both; min-width: 250px; min-height: 250px;
-        }
-        #sp-header {
-            background: #f0f4f8; padding: 8px 12px; display: flex; justify-content: space-between;
-            align-items: center; cursor: grab; border-bottom: 1px solid #ddd; user-select: none;
-        }
-        #sp-header:active { cursor: grabbing; }
-        #sp-title { font-weight: bold; color: #444; font-size: 0.9rem; display: flex; align-items: center; gap: 5px; }
-        .sp-tools { display: flex; gap: 4px; }
-        .sp-btn { background: none; border: 1px solid transparent; cursor: pointer; font-size: 18px; padding: 4px; border-radius: 6px; transition: 0.2s; opacity: 0.7; }
-        .sp-btn:hover { opacity: 1; background: #e2e8f0; }
-        .sp-btn.active { opacity: 1; background: #d0def0; border-color: #a0bcdc; }
-        #sp-canvas-wrapper { flex-grow: 1; position: relative; width: 100%; height: 100%; touch-action: none; background: #fff; }
-        #sp-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: crosshair; }
-
         @media (max-width: 768px) {
             .lobby-title { font-size: 2.2rem; }
             .lobby-subtitle { font-size: 1rem; }
@@ -191,7 +143,6 @@
             .input-group { flex-direction: row; flex-wrap: wrap; }
             select, input[type="number"] { font-size: 1.1rem; padding: 8px; }
             .submit-btn { width: 100%; margin-top: 5px; padding: 12px; }
-            #sp-container { top: 10%; width: 90%; max-width: 400px; resize: none; }
         }
     </style>
 </head>
@@ -304,25 +255,6 @@
     </div>
 </div>
 
-<button id="fab-scratchpad" class="hidden" onclick="toggleSp()" title="打開計算紙">
-    📓
-    <span class="fab-hint">需要計算嗎？<br>點我打開計算紙 👉</span>
-</button>
-
-<div id="sp-container" class="hidden">
-    <div id="sp-header">
-        <div id="sp-title">📓 計算紙 (可隨處拖移)</div>
-        <div class="sp-tools">
-            <button class="sp-btn active" id="sp-pen" onclick="setSpTool('pen')" title="畫筆">✏️</button>
-            <button class="sp-btn" id="sp-eraser" onclick="setSpTool('eraser')" title="橡皮擦">🧽</button>
-            <button class="sp-btn" onclick="clearSp()" title="全部清除">🗑️</button>
-            <button class="sp-btn" onclick="toggleSp()" title="關閉">❌</button>
-        </div>
-    </div>
-    <div id="sp-canvas-wrapper">
-        <canvas id="sp-canvas" width="1000" height="1000"></canvas>
-    </div>
-</div>
 <script>
     const diagState = { lvl: 1, window: [], history: [], passed: new Set(), failed: new Set(), prob: null, isWaitingNext: false, askCount: 0, usedQ: [] };
     const pState = { 
@@ -408,7 +340,6 @@
         document.getElementById('view-game').classList.remove('hidden');
         document.getElementById('diag-module').classList.add('hidden');
         document.getElementById('practice-module').classList.add('hidden');
-        document.getElementById('fab-scratchpad').classList.remove('hidden'); 
 
         if (mode === 'diag') {
             document.getElementById('diag-module').classList.remove('hidden');
@@ -424,8 +355,6 @@
         document.getElementById('view-game').classList.add('hidden');
         document.getElementById('view-lobby').classList.remove('hidden');
         document.getElementById('transition-modal').classList.add('hidden');
-        document.getElementById('fab-scratchpad').classList.add('hidden'); 
-        document.getElementById('sp-container').classList.add('hidden'); 
     }
 
     function startPractice(mode) {
@@ -563,7 +492,7 @@
                 }
 
                 pState[mode].currentAttempt++;
-                msg.innerHTML = "💡 <b>答案快出來了！</b><br>請拿計算紙，重新檢查一次『移項』與『合併』的步驟喔。";
+                msg.innerHTML = "💡 <b>答案快出來了！</b><br>請重新檢查一次『移項』與『合併』的步驟喔。";
                 msg.className = `msg-box wrong-bg`;
                 msg.classList.remove('hidden');
                 document.getElementById('practice-hint-btn').classList.remove('hidden');
@@ -853,7 +782,7 @@
         let badgeTitle = "初探新手";
         let rankNum = 4;
         let statusText = "移項法則和同類項合併還不太熟練喔！遇到未知數或數字搬家時，容易忘記變號（加變減、減變加）。這是最需要花時間適應的基礎，別灰心。";
-        let adviceText = "建議先到「貪吃的魔法貓」遊戲中，重新找回移項與計算的手感，之後再回來挑戰「基礎關」。穩紮穩打，你一定行！";
+        let adviceText = "建議先重新找回移項與計算的手感，之後再回來挑戰「基礎關」。穩紮穩打，你一定行！";
         let isErr = true;
 
         if (diagState.passed.has(3)) { 
@@ -926,118 +855,6 @@
             }
         }
     });
-
-    const spContainer = document.getElementById('sp-container');
-    const spHeader = document.getElementById('sp-header');
-    const spCanvas = document.getElementById('sp-canvas');
-    const spCtx = spCanvas.getContext('2d');
-    
-    let isDrawing = false;
-    let currentSpTool = 'pen';
-    let isDragging = false;
-    let dragStartX, dragStartY, initialLeft, initialTop;
-
-    function toggleSp() {
-        spContainer.classList.toggle('hidden');
-    }
-
-    function setSpTool(tool) {
-        currentSpTool = tool;
-        document.getElementById('sp-pen').classList.remove('active');
-        document.getElementById('sp-eraser').classList.remove('active');
-        document.getElementById('sp-' + tool).classList.add('active');
-    }
-
-    function clearSp() {
-        spCtx.clearRect(0, 0, spCanvas.width, spCanvas.height);
-    }
-
-    spCtx.lineCap = 'round';
-    spCtx.lineJoin = 'round';
-
-    function getCanvasPos(e) {
-        const rect = spCanvas.getBoundingClientRect();
-        const clientX = e.clientX || (e.touches ? e.touches[0].clientX : 0);
-        const clientY = e.clientY || (e.touches ? e.touches[0].clientY : 0);
-        const scaleX = spCanvas.width / rect.width;
-        const scaleY = spCanvas.height / rect.height;
-        return {
-            x: (clientX - rect.left) * scaleX,
-            y: (clientY - rect.top) * scaleY
-        };
-    }
-
-    function startDraw(e) {
-        isDrawing = true;
-        const pos = getCanvasPos(e);
-        spCtx.beginPath();
-        spCtx.moveTo(pos.x, pos.y);
-        draw(e);
-    }
-
-    function draw(e) {
-        if (!isDrawing) return;
-        e.preventDefault(); 
-        const pos = getCanvasPos(e);
-        
-        spCtx.globalCompositeOperation = currentSpTool === 'eraser' ? 'destination-out' : 'source-over';
-        spCtx.lineWidth = currentSpTool === 'eraser' ? 40 : 4; 
-        spCtx.strokeStyle = '#2c3e50';
-
-        spCtx.lineTo(pos.x, pos.y);
-        spCtx.stroke();
-    }
-
-    function endDraw() {
-        isDrawing = false;
-        spCtx.beginPath();
-    }
-
-    spCanvas.addEventListener('mousedown', startDraw);
-    spCanvas.addEventListener('mousemove', draw);
-    spCanvas.addEventListener('mouseup', endDraw);
-    spCanvas.addEventListener('mouseout', endDraw);
-
-    spCanvas.addEventListener('touchstart', startDraw, { passive: false });
-    spCanvas.addEventListener('touchmove', draw, { passive: false });
-    spCanvas.addEventListener('touchend', endDraw);
-
-    // ================= 拖曳功能優化版 =================
-    function dragStart(e) {
-        if(e.target.tagName === 'BUTTON') return; 
-        isDragging = true;
-        dragStartX = e.clientX || e.touches[0].clientX;
-        dragStartY = e.clientY || e.touches[0].clientY;
-        initialLeft = spContainer.offsetLeft;
-        initialTop = spContainer.offsetTop;
-
-        // 💡 關鍵：只有在「開始拖曳」時，才臨時把觸控監聽器掛到 document 上
-        document.addEventListener('touchmove', handleDragMove, { passive: false });
-    }
-
-    function handleDragMove(e) {
-        if(!isDragging) return;
-        e.preventDefault(); // 阻擋畫面跟著滾動
-        const clientX = e.clientX || e.touches[0].clientX;
-        const clientY = e.clientY || e.touches[0].clientY;
-        spContainer.style.left = (initialLeft + clientX - dragStartX) + 'px';
-        spContainer.style.top = (initialTop + clientY - dragStartY) + 'px';
-    }
-
-    function dragEnd() {
-        if (isDragging) {
-            isDragging = false;
-            // 💡 關鍵：拖曳結束後，立刻把 document 上的監聽器拔除，把控制權還給原生瀏覽器
-            document.removeEventListener('touchmove', handleDragMove, { passive: false });
-        }
-    }
-
-    spHeader.addEventListener('mousedown', dragStart);
-    document.addEventListener('mousemove', handleDragMove);
-    document.addEventListener('mouseup', dragEnd);
-    
-    spHeader.addEventListener('touchstart', dragStart, { passive: false });
-    document.addEventListener('touchend', dragEnd);
 
 </script>
 </body>
