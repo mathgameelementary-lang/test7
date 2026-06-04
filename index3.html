@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>不等式冒險島 - AI適性評量</title>
+    <style>
+        :root {
+            --primary: #4a90e2; --secondary: #67c23a; --danger: #f56c6c;
+            --warning: #e6a23c; --dark: #2c3e50; --light: #f4f7f9;
+        }
+        * { box-sizing: border-box; font-family: "Microsoft JhengHei", "Heiti TC", sans-serif; }
+        body { background: #f0f2f5; margin: 0; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
+
+        .hidden { display: none !important; }
+
+        #view-lobby { width: 100%; max-width: 1200px; padding: 40px 15px; text-align: center; }
+        .lobby-header { margin-bottom: 40px; display: flex; flex-direction: column; align-items: center; }
+        .lobby-title { color: #0a1b44; margin: 0 0 15px 0; font-size: 2.8rem; font-weight: bold; letter-spacing: 2px; }
+        .lobby-subtitle { color: #222; font-size: 1.1rem; margin: 0 0 15px 0; font-weight: 600; letter-spacing: 1px; line-height: 1.5; }
+        .lobby-tip { background: #fffdf5; border: 2px solid #f6d89b; border-radius: 30px; padding: 10px 25px; font-size: 1.05rem; color: #333; font-weight: bold; display: inline-block; box-shadow: 0 2px 8px rgba(0,0,0,0.02); line-height: 1.5; }
+        .highlight-red { color: #e5534b; }
+
+        .card-container { display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; padding-bottom: 20px; }
+        .card { background: white; border-radius: 20px; padding: 20px; width: 260px; min-width: 240px; cursor: pointer; transition: 0.3s; box-shadow: 0 8px 15px rgba(0,0,0,0.05); display: flex; flex-direction: column; border: 2px solid transparent; }
+        .card:hover { transform: translateY(-8px); box-shadow: 0 12px 25px rgba(0,0,0,0.1); }
+        .card-diag { border-color: #afeeee; } .card-diag h2 { color: #20b2aa; }
+        .card-base { border-color: #98fb98; } .card-base h2 { color: #2ecc71; }
+        .card-adv { border-color: #adc6ff; } .card-adv h2 { color: #4a90e2; }
+        .card-chal { border-color: #e0b0ff; } .card-chal h2 { color: #9b59b6; }
+        .card-icon { font-size: 45px; margin-bottom: 15px; }
+        .card-list { text-align: left; list-style: none; padding: 0; font-size: 0.85rem; color: #444; flex-grow: 1; }
+        .card-list li { margin-bottom: 10px; display: flex; align-items: flex-start; gap: 6px; }
+
+        .view-content { width: 95%; max-width: 650px; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); margin-top: 20px; margin-bottom: 40px; }
+        .back-btn { padding: 8px 16px; background: var(--dark); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 0.9rem; box-shadow: 0 3px 0 #1a252f; margin-bottom: 15px; }
+        .back-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #1a252f; }
+        
+        .diag-choice-container { display: flex; gap: 15px; justify-content: center; margin-top: 25px; }
+        .diag-lvl-card { flex: 1; padding: 30px 10px; border: none; border-radius: 15px; color: white; cursor: pointer; transition: transform 0.2s, filter 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 150px; }
+        .diag-lvl-card:hover { transform: translateY(-5px); filter: brightness(1.05); }
+        .diag-lvl-card h3 { margin: 0 0 8px 0; font-size: 1.2rem; font-weight: bold; }
+        .diag-lvl-card p { margin: 0; font-size: 1rem; opacity: 0.95; }
+        .lvl-btn { width: 100%; margin-bottom: 12px; padding: 16px; border: none; border-radius: 12px; color: white; font-weight: bold; cursor: pointer; font-size: 1.05rem; }
+        .lvl-btn:active { transform: translateY(3px); }
+
+        .eq-display { font-size: 2.2rem; text-align: center; margin: 20px 0; font-weight: bold; background: #f8f9fa; padding: 20px; border-radius: 15px; min-height: 160px; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; word-break: break-all; transition: all 0.4s ease; border: 3px solid transparent; }
+        .combo-glow-2 { background: #fff8f5; border-color: #ff7849 !important; box-shadow: 0 0 30px rgba(255, 120, 73, 0.6); animation: comboPulse 0.8s infinite alternate ease-in-out; }
+        @keyframes comboPulse { from { transform: scale(1); } to { transform: scale(1.02); } }
+        
+        .input-group { display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+        
+        /* === 修改部分：拆開 select 與 input[type="number"] 的 text-align 設定 === */
+        select, input[type="number"] { 
+            padding: 10px; 
+            font-size: 1.3rem; 
+            border: 2px solid #e0e0e0; 
+            border-radius: 12px; 
+            outline: none; 
+            background: white; 
+            color: var(--dark);
+            transition: 0.2s; 
+            touch-action: manipulation;
+        }
+        select:disabled, input[type="number"]:disabled { background: #f0f0f0; color: #888; cursor: not-allowed; border-color: #ddd; }
+        
+        select { 
+            cursor: pointer; 
+            text-align: left; /* Android 修復關鍵 */
+            padding: 10px 15px;
+        }
+        input[type="number"] { 
+            width: 100px; 
+            cursor: text; 
+            text-align: center; 
+        }
+        /* ======================================================================= */
+
+        .submit-btn { padding: 10px 24px; background: var(--dark); color: white; border: none; border-radius: 12px; cursor: pointer; font-size: 1.1rem; font-weight: bold; box-shadow: 0 4px 0 #1a252f; transition: 0.2s; min-width: 100px; height: 50px; }
+        .submit-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #1a252f; }
+        .submit-btn.next-mode { background: var(--primary); box-shadow: 0 4px 0 #357abd; }
+
+        .transition-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 10000; padding: 15px; }
+        .transition-box { background: white; padding: 30px 20px; border-radius: 20px; text-align: center; max-width: 400px; width: 100%; animation: popScale 0.3s ease; }
+        @keyframes popScale { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        .stamp-badge { font-size: 70px; margin-bottom: 10px; display: inline-block; opacity: 0; animation: stampDrop 0.65s cubic-bezier(0.175, 0.885, 0.32, 1.27) 0.15s forwards; transform-origin: center center; }
+        @keyframes stampDrop { 0% { opacity: 0; transform: scale(4) translateY(-30px) rotate(-25deg); } 45% { opacity: 1; transform: scale(0.9) translateY(0) rotate(10deg); } 65% { transform: scale(1.1) rotate(-5deg); } 85% { transform: scale(0.95) rotate(2deg); } 100% { opacity: 1; transform: scale(1) rotate(0deg); filter: drop-shadow(0 6px 12px rgba(0,0,0,0.25)); } }
+        .box-shake { animation: boxImpact 0.4s ease 0.4s both !important; }
+        @keyframes boxImpact { 0%, 100% { transform: translateY(0) rotate(0deg) scale(1); } 25% { transform: translateY(4px) rotate(1deg) scale(0.99); } 50% { transform: translateY(-2px) rotate(-1deg) scale(1); } 75% { transform: translateY(1px) rotate(0.5deg) scale(1); } }
+
+        .diag-badge { position: relative; display: inline-flex; justify-content: center; align-items: center; width: 65px; height: 65px; border-radius: 50%; font-size: 34px; font-weight: 900; color: #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 1; border: 3px solid rgba(255,255,255,0.6); }
+        .diag-badge::before, .diag-badge::after { content: ''; position: absolute; top: 40px; width: 18px; height: 40px; z-index: -1; border-radius: 2px; }
+        .diag-badge::before { left: 10px; background: #5c9ce6; transform: rotate(20deg); }
+        .diag-badge::after { right: 10px; background: #4a90e2; transform: rotate(-20deg); }
+        .rank-1 { background: linear-gradient(135deg, #FFD700, #F39C12); text-shadow: 1px 2px 2px #B8860B; border-color: #FFF3E0; }
+        .rank-2 { background: linear-gradient(135deg, #E0E0E0, #95A5A6); text-shadow: 1px 2px 2px #7F8C8D; border-color: #F8F9F9; }
+        .rank-3 { background: linear-gradient(135deg, #E67E22, #D35400); text-shadow: 1px 2px 2px #A04000; border-color: #FDEBD0; }
+        .rank-4 { background: linear-gradient(135deg, #2ECC71, #27AE60); text-shadow: 1px 2px 2px #1E8449; border-color: #E8F8F5; }
+
+        .status-bar { display: flex; justify-content: space-between; align-items: center; background: #eee; padding: 10px 15px; border-radius: 10px; margin-bottom: 15px; font-weight: bold; color: var(--dark); font-size: 0.95rem; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; background: #ccc; display: inline-block; margin-left: 4px; }
+        .dot.correct { background: var(--secondary); } .dot.wrong { background: var(--danger); }
+        
+        .msg-box { padding: 15px; border-radius: 10px; margin: 15px 0; text-align: left; font-weight: bold; font-size: 1.05rem; line-height: 1.5; }
+        .correct-bg { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; text-align: center; }
+        .wrong-bg { background: #fff5f5; color: #c62828; border: 1px solid #ffcdd2; }
+        
+        .fraction { display: inline-block; vertical-align: middle; text-align: center; margin: 0 5px; }
+        .fraction > span { display: block; padding: 0 8px; }
+        .fraction span.fdn { border-top: 2px solid var(--dark); }
+        
+        .table-responsive { width: 100%; overflow-x: auto; margin-top: 15px; -webkit-overflow-scrolling: touch; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; min-width: 400px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
+        th { background-color: #f4f7f9; }
+        .advice-box { background: #f4faff; border-left: 5px solid var(--primary); padding: 15px; border-radius: 8px; margin: 20px 0; text-align: left; line-height: 1.6; }
+        .failure-box { background: #fff5f5; border-left: 5px solid var(--danger); padding: 15px; border-radius: 8px; margin: 20px 0; text-align: left; line-height: 1.6; }
+
+        /* ==================== 計算紙專屬樣式 ==================== */
+        #fab-scratchpad {
+            position: fixed; bottom: 25px; right: 25px; width: 65px; height: 65px;
+            background: #fff; border: 3px solid var(--primary); border-radius: 50%;
+            font-size: 30px; display: flex; justify-content: center; align-items: center;
+            cursor: pointer; box-shadow: 0 6px 15px rgba(0,0,0,0.15); z-index: 8000;
+            transition: transform 0.2s; padding-bottom: 2px;
+        }
+        #fab-scratchpad:active { transform: scale(0.9); }
+        #fab-scratchpad:hover { transform: scale(1.05); }
+
+        .fab-hint {
+            position: absolute; right: 85px; top: 50%; transform: translateY(-50%);
+            background: var(--warning); color: white; font-size: 0.95rem; font-weight: bold;
+            padding: 8px 14px; border-radius: 12px; white-space: nowrap; line-height: 1.4;
+            text-align: right; pointer-events: none; box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            animation: floatLeftRight 1.5s infinite alternate ease-in-out;
+        }
+        .fab-hint::after {
+            content: ''; position: absolute; right: -8px; top: 50%; transform: translateY(-50%);
+            border-width: 8px 0 8px 8px; border-style: solid; border-color: transparent transparent transparent var(--warning);
+        }
+        @keyframes floatLeftRight {
+            0% { transform: translateY(-50%) translateX(0); }
+            100% { transform: translateY(-50%) translateX(-8px); }
+        }
+
+        #sp-container {
+            position: fixed; top: 15%; left: 50%; transform: translateX(-50%);
+            width: 320px; height: 380px; background: white; border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 9000;
+            display: flex; flex-direction: column; overflow: hidden;
+            border: 2px solid #ddd; resize: both; min-width: 250px; min-height: 250px;
+        }
+        #sp-header {
+            background: #f0f4f8; padding: 8px 12px; display: flex; justify-content: space-between;
+            align-items: center; cursor: grab; border-bottom: 1px solid #ddd; user-select: none;
+        }
+        #sp-header:active { cursor: grabbing; }
+        #sp-title { font-weight: bold; color: #444; font-size: 0.9rem; display: flex; align-items: center; gap: 5px; }
+        .sp-tools { display: flex; gap: 4px; }
+        .sp-btn { background: none; border: 1px solid transparent; cursor: pointer; font-size: 18px; padding: 4px; border-radius: 6px; transition: 0.2s; opacity: 0.7; }
+        .sp-btn:hover { opacity: 1; background: #e2e8f0; }
+        .sp-btn.active { opacity: 1; background: #d0def0; border-color: #a0bcdc; }
+        #sp-canvas-wrapper { flex-grow: 1; position: relative; width: 100%; height: 100%; touch-action: none; background: #fff; }
+        #sp-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: crosshair; }
+
+        @media (max-width: 768px) {
+            .lobby-title { font-size: 2.2rem; }
+            .lobby-subtitle { font-size: 1rem; }
+            .card-container { gap: 20px; }
+            .card { width: 100%; max-width: 320px; }
+            .diag-choice-container { flex-direction: column; }
+            .diag-lvl-card { min-height: 100px; padding: 20px 10px; }
+            .diag-lvl-card h3 { font-size: 1.3rem; }
+            .view-content { padding: 15px; margin-top: 10px; }
+            .eq-display { font-size: 1.5rem; min-height: 120px; padding: 15px 10px; }
+            .input-group { flex-direction: row; flex-wrap: wrap; }
+            select, input[type="number"] { font-size: 1.1rem; padding: 8px; }
+            .submit-btn { width: 100%; margin-top: 5px; padding: 12px; }
+            #sp-container { top: 10%; width: 90%; max-width: 400px; resize: none; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="view-lobby">
+    <div class="lobby-header">
+        <h1 class="lobby-title">不等式學習冒險島</h1>
+        <p class="lobby-subtitle">本遊戲設有適性診斷、基礎、進階與挑戰等四個關卡，你可以自由挑選任一關。</p>
+        <div class="lobby-tip">
+            💡 如果你想了解自己目前的學習狀態與適合的學習方向，建議先進行<span class="highlight-red">「適性診斷」</span>哦！
+        </div>
+    </div>
+    <div class="card-container">
+        <div class="card card-diag" onclick="openGame('diag')">
+            <div class="card-icon">🔍</div>
+            <h2>適性診斷</h2>
+            <p>偵測你的不等式戰力</p>
+        </div>
+        <div class="card card-base" onclick="openGame('base')">
+            <div class="card-icon">🌱</div>
+            <h2>基礎關</h2>
+            <p>單邊移項基礎練習</p>
+        </div>
+        <div class="card card-adv" onclick="openGame('adv')">
+            <div class="card-icon">🚀</div>
+            <h2>進階關</h2>
+            <p>雙邊移項與負數變向</p>
+        </div>
+        <div class="card card-chal" onclick="openGame('chal')">
+            <div class="card-icon">🏆</div>
+            <h2>挑戰關</h2>
+            <p>異分母分數與括號變號</p>
+        </div>
+    </div>
+</div>
+
+<div id="view-game" class="view-content hidden">
+    <button class="back-btn" onclick="goHome()">← 返回大廳</button>
+    
+    <div id="diag-module" class="hidden">
+        <div id="diag-setup">
+            <h2 style="text-align: center; margin-bottom: 10px;">🎯 歡迎進入適性診斷！</h2>
+            <p style="text-align: center; color: #555; font-weight: bold; margin-bottom: 20px;">此診斷有三個層次，你可以自由挑選任一層次</p>
+            <div class="diag-choice-container">
+                <button class="diag-lvl-card" onclick="startDiag(1)" style="background: var(--secondary); box-shadow: 0 4px 0 #529b2e;">
+                    <h3>從 第 1 層次</h3><p>(基礎) 開始</p>
+                </button>
+                <button class="diag-lvl-card" onclick="startDiag(2)" style="background: var(--primary); box-shadow: 0 4px 0 #357abd;">
+                    <h3>從 第 2 層次</h3><p>(進階) 開始</p>
+                </button>
+                <button class="diag-lvl-card" onclick="startDiag(3)" style="background: var(--danger); box-shadow: 0 4px 0 #c45656;">
+                    <h3>從 第 3 層次</h3><p>(挑戰) 開始</p>
+                </button>
+            </div>
+        </div>
+        <div id="diag-quiz" class="hidden">
+            <div id="diag-trans-msg" class="msg-box hidden" style="text-align:center;"></div>
+            <div class="status-bar"><div>層次：<span id="diag-lvl-label">-</span></div><div id="diag-dots"></div></div>
+            <div class="eq-display" id="diag-eq"></div>
+            <div class="input-group">
+                <span style="font-size:1.5rem; font-weight:bold;">x</span>
+                <select id="diag-op">
+                    <option value=">">&gt;</option>
+                    <option value="<">&lt;</option>
+                    <option value="≥">≥</option>
+                    <option value="≤">≤</option>
+                </select>
+                <select id="diag-sign" style="width: 65px;">
+                    <option value="1">+</option>
+                    <option value="-1">-</option>
+                </select>
+                <input type="number" id="diag-val" placeholder="?">
+                <button id="diag-btn" class="submit-btn" onclick="submitDiag()">回答</button>
+            </div>
+        </div>
+        <div id="diag-report" class="hidden"></div>
+    </div>
+
+    <div id="practice-module" class="hidden">
+        <h2 id="practice-title" style="text-align:center;">關卡名稱</h2>
+        <div id="practice-msg" class="msg-box hidden"></div>
+        <div class="eq-display" id="practice-eq"></div>
+        <div class="input-group">
+            <span style="font-size:1.5rem; font-weight:bold;">x</span>
+            <select id="practice-op">
+                <option value=">">&gt;</option>
+                <option value="<">&lt;</option>
+                <option value="≥">≥</option>
+                <option value="≤">≤</option>
+            </select>
+            <select id="practice-sign" style="width: 65px;">
+                <option value="1">+</option>
+                <option value="-1">-</option>
+            </select>
+            <input type="number" id="practice-val" placeholder="?">
+            <button id="practice-btn" class="submit-btn" onclick="submitPractice()">回答</button>
+            <button id="practice-hint-btn" class="submit-btn hidden" onclick="showHint()" style="background: var(--warning); min-width: auto; padding: 10px 18px;">💡 提示</button>
+        </div>
+    </div>
+</div>
+
+<div id="transition-modal" class="transition-modal hidden">
+    <div id="transition-content-box" class="transition-box">
+        <div id="transition-icon">🌟</div>
+        <h2 id="transition-title">太厲害了！</h2>
+        <p id="transition-text">你已經連續答對多題，代表你對本關卡已經非常精熟囉！</p>
+        <button id="transition-action-btn" class="lvl-btn" style="background:var(--primary); margin-bottom:10px;">挑戰下一關</button>
+        <button onclick="closeTransition()" class="lvl-btn" style="background:var(--dark);">留在這關繼續練</button>
+    </div>
+</div>
+
+<button id="fab-scratchpad" class="hidden" onclick="toggleSp()" title="打開計算紙">
+    📓
+    <span class="fab-hint">需要計算嗎？<br>點我打開計算紙 👉</span>
+</button>
+
+<div id="sp-container" class="hidden">
+    <div id="sp-header">
+        <div id="sp-title">📓 計算紙 (可隨處拖移)</div>
+        <div class="sp-tools">
+            <button class="sp-btn active" id="sp-pen" onclick="setSpTool('pen')" title="畫筆">✏️</button>
+            <button class="sp-btn" id="sp-eraser" onclick="setSpTool('eraser')" title="橡皮擦">🧽</button>
+            <button class="sp-btn" onclick="clearSp()" title="全部清除">🗑️</button>
+            <button class="sp-btn" onclick="toggleSp()" title="關閉">❌</button>
+        </div>
+    </div>
+    <div id="sp-canvas-wrapper">
+        <canvas id="sp-canvas" width="1000" height="1000"></canvas>
+    </div>
+</div>
+<script>
+    const diagState = { lvl: 1, window: [], history: [], passed: new Set(), failed: new Set(), prob: null, isWaitingNext: false, askCount: 0, usedQ: [] };
+    const pState = { 
+        currentMode: 'base',
+        base: { window: [], isWaitingNext: false, askCount: 0, currentAttempt: 0, usedQ: [] },
+        adv:  { window: [], isWaitingNext: false, askCount: 0, currentAttempt: 0, usedQ: [] },
+        chal: { window: [], isWaitingNext: false, askCount: 0, currentAttempt: 0, usedQ: [] }
+    };
+    const levelMap = {
+        'base': { next: 'adv', prev: 'lobby', nextName: '進階關', prevName: '大廳' },
+        'adv':  { next: 'chal', prev: 'base', nextName: '挑戰關', prevName: '基礎關' },
+        'chal': { next: 'lobby', prev: 'adv', nextName: '大廳', prevName: '進階關' }
+    };
+
+    let _isEasier = false; 
+    function getNonZero(range, offset) {
+        let r = Math.floor(range), o = Math.floor(offset);
+        if (_isEasier) { r = Math.max(3, Math.ceil(r * 0.4)); o = Math.trunc(o * 0.4); }
+        let res = 0; while(res === 0) { res = Math.floor(Math.random() * r) + o; } return res;
+    }
+    function isOneStepFromUpgrade(windowArr) {
+        let simW = [...windowArr, true]; if (simW.length > 4) simW.shift(); return simW.filter(x => x).length >= 3;
+    }
+
+    const fs = n => n === 0 ? `` : (n > 0 ? `+ ${n}` : `− ${Math.abs(n)}`);
+    const fi = n => n === 0 ? `` : (n > 0 ? `− ${n}` : `+ ${Math.abs(n)}`);
+    const fs1 = n => n === 0 ? `` : (n > 0 ? `+ ${n}` : `− ${Math.abs(n)}`); 
+    const fi1 = n => n === 0 ? `` : (n > 0 ? `− ${n}` : `+ ${Math.abs(n)}`);
+
+    const qBanks = {
+        'base': [
+            { getOriginal: () => ({ eq: `x − 7 > 5`, solX: 12, solOp: `>`, stepsHTML: `移項：x > 5 + 7<br>計算：x > 12` }), getVariation: () => { let sX = getNonZero(15, -5), c1 = getNonZero(15, -15), c2 = sX + c1; return { eq: `x ${fs1(c1)} > ${c2}`, solX: sX, solOp: `>`, stepsHTML: `移項：x > ${c2} ${fi1(c1)}<br>計算：x > ${sX}` }; } },
+            { getOriginal: () => ({ eq: `x + 6 ≥ 9`, solX: 3, solOp: `≥`, stepsHTML: `移項：x ≥ 9 − 6<br>計算：x ≥ 3` }), getVariation: () => { let sX = getNonZero(15, -5), c1 = getNonZero(15, -15), c2 = sX + c1; return { eq: `x ${fs1(c1)} ≥ ${c2}`, solX: sX, solOp: `≥`, stepsHTML: `移項：x ≥ ${c2} ${fi1(c1)}<br>計算：x ≥ ${sX}` }; } },
+            { getOriginal: () => ({ eq: `<div class="fraction"><span>1</span><span class="fdn">3</span></div>x < 2`, solX: 6, solOp: `<`, stepsHTML: `同乘 3：x < 2 × 3<br>計算：x < 6` }), getVariation: () => { let sX = getNonZero(10, 1) * 3, c1 = getNonZero(5, -5), c2 = (sX / 3) + c1; return { eq: `<div class="fraction"><span>1</span><span class="fdn">3</span></div>x ${fs1(c1)} < ${c2}`, solX: sX, solOp: `<`, stepsHTML: `移項：(1/3)x < ${c2} ${fi1(c1)}<br>計算：(1/3)x < ${c2-c1}<br>同乘 3：x < ${sX}` }; } },
+            { getOriginal: () => ({ eq: `<div class="fraction"><span>3</span><span class="fdn">4</span></div>x > 6`, solX: 8, solOp: `>`, stepsHTML: `同乘 4/3：x > 6 × (4/3)<br>計算：x > 8` }), getVariation: () => { let sX = getNonZero(8, 1) * 4, c1 = getNonZero(5, -5), c2 = (3 * sX / 4) + c1; return { eq: `<div class="fraction"><span>3</span><span class="fdn">4</span></div>x ${fs1(c1)} > ${c2}`, solX: sX, solOp: `>`, stepsHTML: `移項：(3/4)x > ${c2} ${fi1(c1)}<br>計算：(3/4)x > ${c2-c1}<br>同乘 4/3：x > ${sX}` }; } },
+            { getOriginal: () => ({ eq: `2x > 8`, solX: 4, solOp: `>`, stepsHTML: `同除 2：x > 8 / 2<br>計算：x > 4` }), getVariation: () => { let sX = getNonZero(10, -5), c1 = getNonZero(10, -10), c2 = 2 * sX + c1; return { eq: `2x ${fs1(c1)} > ${c2}`, solX: sX, solOp: `>`, stepsHTML: `移項：2x > ${c2} ${fi1(c1)}<br>計算：2x > ${c2-c1}<br>同除 2：x > ${sX}` }; } },
+            { getOriginal: () => ({ eq: `3x < 15`, solX: 5, solOp: `<`, stepsHTML: `同除 3：x < 15 / 3<br>計算：x < 5` }), getVariation: () => { let sX = getNonZero(10, -5), c1 = getNonZero(10, -10), c2 = 3 * sX + c1; return { eq: `3x ${fs1(c1)} < ${c2}`, solX: sX, solOp: `<`, stepsHTML: `移項：3x < ${c2} ${fi1(c1)}<br>計算：3x < ${c2-c1}<br>同除 3：x < ${sX}` }; } },
+            { getOriginal: () => ({ eq: `2x + 5 ≥ 9`, solX: 2, solOp: `≥`, stepsHTML: `移項：2x ≥ 9 − 5<br>計算：2x ≥ 4<br>同除 2：x ≥ 2` }), getVariation: () => { let sX = getNonZero(10, -5), c1 = getNonZero(10, -10), c2 = 2 * sX + c1; return { eq: `2x ${fs1(c1)} ≥ ${c2}`, solX: sX, solOp: `≥`, stepsHTML: `移項：2x ≥ ${c2} ${fi1(c1)}<br>計算：2x ≥ ${c2-c1}<br>同除 2：x ≥ ${sX}` }; } },
+            { getOriginal: () => ({ eq: `3x + 7 ≤ 13`, solX: 2, solOp: `≤`, stepsHTML: `移項：3x ≤ 13 − 7<br>計算：3x ≤ 6<br>同除 3：x ≤ 2` }), getVariation: () => { let sX = getNonZero(10, -5), c1 = getNonZero(10, -10), c2 = 3 * sX + c1; return { eq: `3x ${fs1(c1)} ≤ ${c2}`, solX: sX, solOp: `≤`, stepsHTML: `移項：3x ≤ ${c2} ${fi1(c1)}<br>計算：3x ≤ ${c2-c1}<br>同除 3：x ≤ ${sX}` }; } },
+            { getOriginal: () => ({ eq: `2x − 7 ≥ 19`, solX: 13, solOp: `≥`, stepsHTML: `移項：2x ≥ 19 + 7<br>計算：2x ≥ 26<br>同除 2：x ≥ 13` }), getVariation: () => { let sX = getNonZero(15, -5), c1 = getNonZero(15, -15), c2 = 2 * sX + c1; return { eq: `2x ${fs1(c1)} ≥ ${c2}`, solX: sX, solOp: `≥`, stepsHTML: `移項：2x ≥ ${c2} ${fi1(c1)}<br>計算：2x ≥ ${c2-c1}<br>同除 2：x ≥ ${sX}` }; } },
+            { getOriginal: () => ({ eq: `5x + 2 < 12`, solX: 2, solOp: `<`, stepsHTML: `移項：5x < 12 − 2<br>計算：5x < 10<br>同除 5：x < 2` }), getVariation: () => { let sX = getNonZero(8, -4), c1 = getNonZero(15, -15), c2 = 5 * sX + c1; return { eq: `5x ${fs1(c1)} < ${c2}`, solX: sX, solOp: `<`, stepsHTML: `移項：5x < ${c2} ${fi1(c1)}<br>計算：5x < ${c2-c1}<br>同除 5：x < ${sX}` }; } }
+        ],
+        'adv': [
+            { getOriginal: () => ({ eq: `-x − 7 > 5`, solX: -12, solOp: `<`, stepsHTML: `移項：-x > 5 + 7<br>計算：-x > 12<br>同除 -1 <b>(記得轉向)</b>：x < -12` }), getVariation: () => { let sX = getNonZero(10, -15), c1 = getNonZero(15, -15), c2 = -1 * sX + c1; return { eq: `-x ${fs1(c1)} > ${c2}`, solX: sX, solOp: `<`, stepsHTML: `移項：-x > ${c2} ${fi1(c1)}<br>計算：-x > ${c2-c1}<br>同除 -1 <b>(記得轉向)</b>：x < ${sX}` }; } },
+            { getOriginal: () => ({ eq: `-<div class="fraction"><span>3</span><span class="fdn">4</span></div>x > 6`, solX: -8, solOp: `<`, stepsHTML: `同乘 -4/3 <b>(記得轉向)</b>：x < 6 × (-4/3)<br>計算：x < -8` }), getVariation: () => { let sX = getNonZero(8, -8) * 4, c1 = getNonZero(5, -5), c2 = (-3 * sX / 4) + c1; return { eq: `-<div class="fraction"><span>3</span><span class="fdn">4</span></div>x ${fs1(c1)} > ${c2}`, solX: sX, solOp: `<`, stepsHTML: `移項：-(3/4)x > ${c2} ${fi1(c1)}<br>計算：-(3/4)x > ${c2-c1}<br>同乘 -4/3 <b>(記得轉向)</b>：x < ${sX}` }; } },
+            { getOriginal: () => ({ eq: `-2x > 8`, solX: -4, solOp: `<`, stepsHTML: `同除 -2 <b>(記得轉向)</b>：x < 8 / -2<br>計算：x < -4` }), getVariation: () => { let sX = getNonZero(10, -10), c1 = getNonZero(10, -10), c2 = -2 * sX + c1; return { eq: `-2x ${fs1(c1)} > ${c2}`, solX: sX, solOp: `<`, stepsHTML: `移項：-2x > ${c2} ${fi1(c1)}<br>計算：-2x > ${c2-c1}<br>同除 -2 <b>(記得轉向)</b>：x < ${sX}` }; } },
+            { getOriginal: () => ({ eq: `-2x + 5 ≥ 9`, solX: -2, solOp: `≤`, stepsHTML: `移項：-2x ≥ 9 − 5<br>計算：-2x ≥ 4<br>同除 -2 <b>(記得轉向)</b>：x ≤ -2` }), getVariation: () => { let sX = getNonZero(10, -10), c1 = getNonZero(10, -10), c2 = -2 * sX + c1; return { eq: `-2x ${fs1(c1)} ≥ ${c2}`, solX: sX, solOp: `≤`, stepsHTML: `移項：-2x ≥ ${c2} ${fi1(c1)}<br>計算：-2x ≥ ${c2-c1}<br>同除 -2 <b>(記得轉向)</b>：x ≤ ${sX}` }; } },
+            { getOriginal: () => ({ eq: `-5x + 2 < 12`, solX: -2, solOp: `<`, stepsHTML: `移項：-5x < 12 − 2<br>計算：-5x < 10<br>同除 -5 <b>(記得轉向)</b>：x > -2` }), getVariation: () => { let sX = getNonZero(8, -8), c1 = getNonZero(15, -15), c2 = -5 * sX + c1; return { eq: `-5x ${fs1(c1)} < ${c2}`, solX: sX, solOp: `<`, stepsHTML: `移項：-5x < ${c2} ${fi1(c1)}<br>計算：-5x < ${c2-c1}<br>同除 -5 <b>(記得轉向)</b>：x > ${sX}` }; } },
+            { getOriginal: () => ({ eq: `-10 > 6x + 8`, solX: -3, solOp: `<`, stepsHTML: `移項：-6x > 8 + 10<br>計算：-6x > 18<br>同除 -6 <b>(記得轉向)</b>：x < -3` }), getVariation: () => { let sX = getNonZero(8, -8), c2 = getNonZero(15, -15), c1 = 6 * sX + c2; return { eq: `${c1} > 6x ${fs1(c2)}`, solX: sX, solOp: `<`, stepsHTML: `移項：-6x > ${c2} ${fi1(c1)}<br>計算：-6x > ${c2-c1}<br>同除 -6 <b>(記得轉向)</b>：x < ${sX}` }; } },
+            { getOriginal: () => ({ eq: `-10 > -6x + 8`, solX: 3, solOp: `>`, stepsHTML: `移項：6x > 8 + 10<br>計算：6x > 18<br>同除 6：x > 3` }), getVariation: () => { let sX = getNonZero(8, -8), c2 = getNonZero(15, -15), c1 = -6 * sX + c2; return { eq: `${c1} > -6x ${fs1(c2)}`, solX: sX, solOp: `>`, stepsHTML: `移項：6x > ${c2} ${fi1(c1)}<br>計算：6x > ${c2-c1}<br>同除 6：x > ${sX}` }; } },
+            { getOriginal: () => ({ eq: `3x + 4 > -2x + 14`, solX: 2, solOp: `>`, stepsHTML: `移項：3x + 2x > 14 − 4<br>計算：5x > 10<br>同除 5：x > 2` }), getVariation: () => { let sX, c1, c2; do { sX = getNonZero(8, -4); c1 = getNonZero(15, -15); c2 = 5 * sX + c1; } while(c2 === 0); return { eq: `3x ${fs1(c1)} > -2x ${fs1(c2)}`, solX: sX, solOp: `>`, stepsHTML: `移項：3x + 2x > ${c2} ${fi1(c1)}<br>計算：5x > ${c2-c1}<br>同除 5：x > ${sX}` }; } },
+            { getOriginal: () => ({ eq: `-4x + 1 ≤ 3x − 13`, solX: 2, solOp: `≥`, stepsHTML: `移項：-4x − 3x ≤ -13 − 1<br>計算：-7x ≤ -14<br>同除 -7 <b>(記得轉向)</b>：x ≥ 2` }), getVariation: () => { let sX, c1, c2; do { sX = getNonZero(8, -4); c1 = getNonZero(15, -15); c2 = -7 * sX + c1; } while(c2 === 0); return { eq: `-4x ${fs1(c1)} ≤ 3x ${fs1(c2)}`, solX: sX, solOp: `≥`, stepsHTML: `移項：-4x − 3x ≤ ${c2} ${fi1(c1)}<br>計算：-7x ≤ ${c2-c1}<br>同除 -7 <b>(記得轉向)</b>：x ≥ ${sX}` }; } },
+            { getOriginal: () => ({ eq: `-2x + 3 ≥ 3x + 8`, solX: -1, solOp: `≤`, stepsHTML: `移項：-2x − 3x ≥ 8 − 3<br>計算：-5x ≥ 5<br>同除 -5 <b>(記得轉向)</b>：x ≤ -1` }), getVariation: () => { let sX, c1, c2; do { sX = getNonZero(8, -6); c1 = getNonZero(15, -15); c2 = -5 * sX + c1; } while(c2 === 0); return { eq: `-2x ${fs1(c1)} ≥ 3x ${fs1(c2)}`, solX: sX, solOp: `≤`, stepsHTML: `移項：-2x − 3x ≥ ${c2} ${fi1(c1)}<br>計算：-5x ≥ ${c2-c1}<br>同除 -5 <b>(記得轉向)</b>：x ≤ ${sX}` }; } }
+        ],
+        'chal': [
+            { getOriginal: () => ({ eq: `7x + 3 ≤ 2(5x − 9)`, solX: 7, solOp: `≥`, stepsHTML: `展開：7x + 3 ≤ 10x − 18<br>移項：7x − 10x ≤ -18 − 3<br>計算：-3x ≤ -21<br>同除 -3 <b>(記得轉向)</b>：x ≥ 7` }), getVariation: () => { let sX, c1, c2; do { sX = getNonZero(8, -4); c1 = getNonZero(10, -10); if (Math.abs(c1 % 2) !== Math.abs(sX % 2)) c1 += 1; c2 = (c1 - 3 * sX) / 2; } while (c2 === 0 || c1 === 0); return { eq: `7x ${fs1(c1)} ≤ 2(5x ${fs1(c2)})`, solX: sX, solOp: `≥`, stepsHTML: `展開：7x ${fs1(c1)} ≤ 10x ${fs1(c2*2)}<br>移項：7x − 10x ≤ ${c2*2} ${fi1(c1)}<br>計算：-3x ≤ ${c2*2-c1}<br>同除 -3 <b>(記得轉向)</b>：x ≥ ${sX}` }; } },
+            { getOriginal: () => ({ eq: `-2x − 6 > 2(3x − 7)`, solX: 1, solOp: `<`, stepsHTML: `展開：-2x − 6 > 6x − 14<br>移項：-2x − 6x > -14 + 6<br>計算：-8x > -8<br>同除 -8 <b>(記得轉向)</b>：x < 1` }), getVariation: () => { let sX, c1, c2; do { sX = getNonZero(8, -4); c1 = getNonZero(5, -5) * 2; c2 = (c1 - 8 * sX) / 2; } while (c2 === 0); return { eq: `-2x ${fs1(c1)} > 2(3x ${fs1(c2)})`, solX: sX, solOp: `<`, stepsHTML: `展開：-2x ${fs1(c1)} > 6x ${fs1(c2*2)}<br>移項：-2x − 6x > ${c2*2} ${fi1(c1)}<br>計算：-8x > ${c2*2-c1}<br>同除 -8 <b>(記得轉向)</b>：x < ${sX}` }; } },
+            { getOriginal: () => ({ eq: `3(2x + 4) < 2x − 8`, solX: -5, solOp: `<`, stepsHTML: `展開：6x + 12 < 2x − 8<br>移項：6x − 2x < -8 − 12<br>計算：4x < -20<br>同除 4：x < -5` }), getVariation: () => { let sX, c1, c2; do { sX = getNonZero(8, -8); c1 = getNonZero(10, -10); c2 = 4 * sX + 3 * c1; } while (c2 === 0); return { eq: `3(2x ${fs1(c1)}) < 2x ${fs1(c2)}`, solX: sX, solOp: `<`, stepsHTML: `展開：6x ${fs1(3*c1)} < 2x ${fs1(c2)}<br>移項：6x − 2x < ${c2} ${fi1(3*c1)}<br>計算：4x < ${c2 - 3*c1}<br>同除 4：x < ${sX}` }; } },
+            { getOriginal: () => ({ eq: `9(x − 2) + 10 ≥ 4(3x − 2)`, solX: 0, solOp: `≤`, stepsHTML: `展開：9x − 18 + 10 ≥ 12x − 8<br>合併：9x − 8 ≥ 12x − 8<br>移項：9x − 12x ≥ -8 + 8<br>計算：-3x ≥ 0<br>同除 -3 <b>(記得轉向)</b>：x ≤ 0` }), getVariation: () => { let sX, c3, c2; do { sX = getNonZero(6, -4); c3 = getNonZero(5, -5); c2 = 4 * c3 + 3 * sX + 18; } while (c2 === 0); return { eq: `9(x − 2) ${fs1(c2)} ≥ 4(3x ${fs1(c3)})`, solX: sX, solOp: `≤`, stepsHTML: `展開：9x − 18 ${fs1(c2)} ≥ 12x ${fs1(4*c3)}<br>合併：9x ${fs1(-18+c2)} ≥ 12x ${fs1(4*c3)}<br>移項：9x − 12x ≥ ${4*c3} ${fi1(-18+c2)}<br>計算：-3x ≥ ${4*c3 - (-18+c2)}<br>同除 -3 <b>(記得轉向)</b>：x ≤ ${sX}` }; } },
+            { getOriginal: () => ({ eq: `<div class="fraction"><span>5x − 4</span><span class="fdn">6</span></div> < <div class="fraction"><span>2x + 3</span><span class="fdn">3</span></div>`, solX: 10, solOp: `<`, stepsHTML: `同乘 6：5x − 4 < 2(2x + 3)<br>展開：5x − 4 < 4x + 6<br>移項：5x − 4x < 6 + 4<br>計算：x < 10` }), getVariation: () => { let sX, c2, c1; do { sX = getNonZero(12, -5); c2 = getNonZero(10, -5); c1 = 2 * c2 - sX; } while (c1 === 0); return { eq: `<div class="fraction"><span>5x ${fs1(c1)}</span><span class="fdn">6</span></div> < <div class="fraction"><span>2x ${fs1(c2)}</span><span class="fdn">3</span></div>`, solX: sX, solOp: `<`, stepsHTML: `同乘 6 去分母：5x ${fs1(c1)} < 2(2x ${fs1(c2)})<br>展開：5x ${fs1(c1)} < 4x ${fs1(2*c2)}<br>移項：5x − 4x < ${2*c2} ${fi1(c1)}<br>計算：x < ${sX}` }; } },
+            { getOriginal: () => ({ eq: `<div class="fraction"><span>-3x + 5</span><span class="fdn">4</span></div> < -<div class="fraction"><span>1</span><span class="fdn">6</span></div>x + <div class="fraction"><span>2</span><span class="fdn">3</span></div>`, solX: 1, solOp: `>`, stepsHTML: `同乘 12：3(-3x + 5) < -2x + 8<br>展開：-9x + 15 < -2x + 8<br>移項：-9x + 2x < 8 − 15<br>計算：-7x < -7<br>同除 -7 <b>(記得轉向)</b>：x > 1` }), 
+              getVariation: () => { 
+                let sX, c1, c2, att=0; 
+                do { sX = getNonZero(8, -4); c1 = getNonZero(10, -5); att++; if(att>20)_isEasier=false; c2 = (3 * c1 - 7 * sX) / 4; } while ((3 * c1 - 7 * sX) % 4 !== 0 || c2 === 0); 
+                return { eq: `<div class="fraction"><span>-3x ${fs1(c1)}</span><span class="fdn">4</span></div> < -<div class="fraction"><span>1</span><span class="fdn">6</span></div>x ${c2>0?'+ <div class="fraction"><span>'+c2+'</span><span class="fdn">3</span></div>':'− <div class="fraction"><span>'+Math.abs(c2)+'</span><span class="fdn">3</span></div>'}`, solX: sX, solOp: `>`, stepsHTML: `同乘 12：3(-3x ${fs1(c1)}) < -2x ${fs1(c2*4)}<br>展開：-9x ${fs1(3*c1)} < -2x ${fs1(c2*4)}<br>移項：-9x + 2x < ${c2*4} ${fi1(3*c1)}<br>計算：-7x < ${c2*4 - 3*c1}<br>同除 -7 <b>(記得轉向)</b>：x > ${sX}` }; 
+              } 
+            },
+            { getOriginal: () => ({ eq: `<div class="fraction"><span>4 + 2x</span><span class="fdn">3</span></div> + <div class="fraction"><span>1 − 3x</span><span class="fdn">2</span></div> ≤ x`, solX: 1, solOp: `≥`, stepsHTML: `同乘 6：2(4 + 2x) + 3(1 − 3x) ≤ 6x<br>展開：8 + 4x + 3 − 9x ≤ 6x<br>合併：-5x + 11 ≤ 6x<br>移項：-5x − 6x ≤ -11<br>計算：-11x ≤ -11<br>同除 -11 <b>(記得轉向)</b>：x ≥ 1` }), 
+              getVariation: () => { 
+                let sX, c3, c1, att=0; 
+                do { sX = getNonZero(6, -3); c3 = getNonZero(5, -3); att++; if(att>20)_isEasier=false; c1 = (11 * sX + 6 * c3 - 3) / 2; } while (Math.abs(11 * sX + 6 * c3 - 3) % 2 !== 0 || c1 === 0); 
+                return { eq: `<div class="fraction"><span>${c1} + 2x</span><span class="fdn">3</span></div> + <div class="fraction"><span>1 − 3x</span><span class="fdn">2</span></div> ≤ x ${fs1(c3)}`, solX: sX, solOp: `≥`, stepsHTML: `同乘 6：2(${c1} + 2x) + 3(1 − 3x) ≤ 6(x ${fs1(c3)})<br>展開：${2*c1} + 4x + 3 − 9x ≤ 6x ${fs1(6*c3)}<br>合併：-5x ${fs1(2*c1+3)} ≤ 6x ${fs1(6*c3)}<br>移項：-5x − 6x ≤ ${6*c3} ${fi1(2*c1+3)}<br>計算：-11x ≤ ${6*c3 - (2*c1+3)}<br>同除 -11 <b>(記得轉向)</b>：x ≥ ${sX}` }; 
+              } 
+            },
+            { getOriginal: () => ({ eq: `<div class="fraction"><span>1</span><span class="fdn">3</span></div>x + <div class="fraction"><span>5</span><span class="fdn">6</span></div> < 5 − <div class="fraction"><span>1</span><span class="fdn">2</span></div>x`, solX: 5, solOp: `<`, stepsHTML: `同乘 6：2x + 5 < 30 − 3x<br>移項：2x + 3x < 30 − 5<br>計算：5x < 25<br>同除 5：x < 5` }), getVariation: () => { let sX, c2, c1; do { sX = getNonZero(8, -4); c2 = getNonZero(8, -4); c1 = 6 * c2 - 5 * sX; } while (c1 === 0); return { eq: `<div class="fraction"><span>1</span><span class="fdn">3</span></div>x ${c1>0?'+ <div class="fraction"><span>'+c1+'</span><span class="fdn">6</span></div>':'− <div class="fraction"><span>'+Math.abs(c1)+'</span><span class="fdn">6</span></div>'} < ${c2} − <div class="fraction"><span>1</span><span class="fdn">2</span></div>x`, solX: sX, solOp: `<`, stepsHTML: `同乘 6：2x ${fs1(c1)} < ${6*c2} − 3x<br>移項：2x + 3x < ${6*c2} ${fi1(c1)}<br>計算：5x < ${6*c2 - c1}<br>同除 5：x < ${sX}` }; } },
+            { getOriginal: () => ({ eq: `0.6(x + 7) + 1.8 > x − 0.4`, solX: 16, solOp: `<`, stepsHTML: `展開：0.6x + 4.2 + 1.8 > x − 0.4<br>合併：0.6x + 6 > x − 0.4<br>移項：0.6x − x > -0.4 − 6<br>計算：-0.4x > -6.4<br>同除 -0.4 <b>(記得轉向)</b>：x < 16` }), getVariation: () => { let validSX = _isEasier ? [3, -2] : [3, 8, 13, -2, -7, 18]; let sX, c1, c2; do { sX = validSX[Math.floor(Math.random() * validSX.length)]; c1 = Number((getNonZero(5, -5) + 0.8).toFixed(1)); c2 = Number((c1 + (42 - 4 * sX) / 10).toFixed(1)); } while (c2 === 0 || c1 === 0); return { eq: `0.6(x + 7) ${fs1(c1)} > x ${fs1(c2)}`, solX: sX, solOp: `<`, stepsHTML: `展開：0.6x + 4.2 ${fs1(c1)} > x ${fs1(c2)}<br>合併：0.6x ${fs1(Number((4.2+c1).toFixed(1)))} > x ${fs1(c2)}<br>移項：0.6x − x > ${c2} ${fi1(Number((4.2+c1).toFixed(1)))}<br>計算：-0.4x > ${Number((c2 - 4.2 - c1).toFixed(1))}<br>同除 -0.4 <b>(記得轉向)</b>：x < ${sX}` }; } },
+            { getOriginal: () => ({ eq: `0.5(2x + 3) − 0.2x ≥ 0.7(x + 5)`, solX: 20, solOp: `≥`, stepsHTML: `展開：x + 1.5 − 0.2x ≥ 0.7x + 3.5<br>合併：0.8x + 1.5 ≥ 0.7x + 3.5<br>移項：0.8x − 0.7x ≥ 3.5 − 1.5<br>計算：0.1x ≥ 2<br>同除 0.1：x ≥ 20` }), getVariation: () => { let c1 = getNonZero(8, 1), c2 = getNonZero(8, 1), sX = 7 * c2 - 5 * c1; return { eq: `0.5(2x + ${c1}) − 0.2x ≥ 0.7(x + ${c2})`, solX: sX, solOp: `≥`, stepsHTML: `展開：x + ${0.5*c1} − 0.2x ≥ 0.7x + ${0.7*c2}<br>合併：0.8x + ${0.5*c1} ≥ 0.7x + ${0.7*c2}<br>移項：0.8x − 0.7x ≥ ${0.7*c2} − ${0.5*c1}<br>計算：0.1x ≥ ${Number((0.7*c2 - 0.5*c1).toFixed(1))}<br>同除 0.1：x ≥ ${sX}` }; } }
+        ]
+    };
+
+    function openGame(mode) {
+        document.getElementById('view-lobby').classList.add('hidden');
+        document.getElementById('view-game').classList.remove('hidden');
+        document.getElementById('diag-module').classList.add('hidden');
+        document.getElementById('practice-module').classList.add('hidden');
+        document.getElementById('fab-scratchpad').classList.remove('hidden'); 
+
+        if (mode === 'diag') {
+            document.getElementById('diag-module').classList.remove('hidden');
+            resetDiag();
+        } else {
+            pState.currentMode = mode;
+            document.getElementById('practice-module').classList.remove('hidden');
+            startPractice(mode);
+        }
+    }
+
+    function goHome() {
+        document.getElementById('view-game').classList.add('hidden');
+        document.getElementById('view-lobby').classList.remove('hidden');
+        document.getElementById('transition-modal').classList.add('hidden');
+        document.getElementById('fab-scratchpad').classList.add('hidden'); 
+        document.getElementById('sp-container').classList.add('hidden'); 
+    }
+
+    function startPractice(mode) {
+        const titles = { 'base': '🌱 基礎關：單邊移項', 'adv': '🚀 進階關：雙邊移項與變向', 'chal': '🏆 挑戰關：分數型與括號' };
+        const colors = { 'base': 'var(--secondary)', 'adv': 'var(--primary)', 'chal': 'var(--danger)' };
+        document.getElementById('practice-title').innerText = titles[mode];
+        document.getElementById('practice-eq').style.color = colors[mode];
+        
+        pState[mode].window = []; 
+        pState[mode].isWaitingNext = false;
+        pState[mode].askCount = 0;
+        pState[mode].currentAttempt = 0;
+        pState[mode].usedQ = []; 
+        
+        toggleInputs('practice', false);
+        toggleButtonToNext(document.getElementById('practice-btn'), false);
+        document.getElementById('practice-msg').classList.add('hidden');
+        document.getElementById('practice-hint-btn').classList.add('hidden');
+        
+        generateProb(mode);
+    }
+
+    function generateProb(mode) {
+        pState[mode].currentAttempt = 0;
+        document.getElementById('practice-hint-btn').classList.add('hidden');
+
+        const win = pState[mode].window;
+        _isEasier = (win.length > 0 && win[win.length - 1] === false);
+
+        pState[mode].askCount++;
+        
+        const bank = qBanks[mode];
+        let prob = {};
+
+        if (pState[mode].askCount <= 3) {
+            let available = bank.map((_, i) => i).filter(i => !pState[mode].usedQ.includes(i));
+            if (available.length === 0) available = bank.map((_, i) => i); 
+            let idx = available[Math.floor(Math.random() * available.length)];
+            pState[mode].usedQ.push(idx);
+            prob = bank[idx].getOriginal();
+        } else {
+            const template = bank[Math.floor(Math.random() * bank.length)];
+            prob = template.getVariation();
+        }
+
+        const eqBox = document.getElementById('practice-eq');
+        eqBox.className = "eq-display";
+        if (isOneStepFromUpgrade(pState[mode].window)) {
+            eqBox.classList.add('combo-glow-2');
+        }
+
+        pState[mode].prob = prob;
+        eqBox.innerHTML = prob.eq;
+        
+        document.getElementById('practice-val').value = "";
+        document.getElementById('practice-sign').value = "1";
+    }
+
+    function submitPractice() {
+        const mode = pState.currentMode;
+        const btn = document.getElementById('practice-btn');
+        const msg = document.getElementById('practice-msg');
+
+        if (pState[mode].isWaitingNext) {
+            pState[mode].isWaitingNext = false;
+            msg.classList.add('hidden');
+            toggleInputs('practice', false);
+            toggleButtonToNext(btn, false);
+            generateProb(mode);
+            return;
+        }
+
+        const uOp = document.getElementById('practice-op').value;
+        const rawVal = parseInt(document.getElementById('practice-val').value);
+        
+        if (isNaN(rawVal)) {
+            msg.innerText = "⚠️ 請先輸入數字喔！";
+            msg.className = 'msg-box wrong-bg';
+            msg.classList.remove('hidden');
+            return;
+        }
+
+        // 🌟 正負號邏輯：將選單符號(1 或 -1)乘上輸入的數字
+        const sign = parseInt(document.getElementById('practice-sign').value);
+        const uVal = sign * rawVal;
+
+        const isOk = (uOp === pState[mode].prob.solOp && uVal === pState[mode].prob.solX);
+        
+        if (isOk) {
+            if (pState[mode].currentAttempt === 0) {
+                pState[mode].window.push(true);
+                msg.innerHTML = "✅ <b>太棒了！答對了！</b>";
+            } else {
+                msg.innerHTML = "✅ <b>訂正成功！做得很棒！</b>";
+            }
+
+            if (pState[mode].window.length > 4) pState[mode].window.shift();
+            const okCount = pState[mode].window.filter(x => x).length;
+
+            msg.className = `msg-box correct-bg`;
+            msg.classList.remove('hidden');
+            document.getElementById('practice-hint-btn').classList.add('hidden');
+
+            const eqBox = document.getElementById('practice-eq');
+            eqBox.className = "eq-display";
+            if (isOneStepFromUpgrade(pState[mode].window)) {
+                eqBox.classList.add('combo-glow-2');
+            }
+
+            pState[mode].isWaitingNext = true;
+            toggleInputs('practice', true);
+            toggleButtonToNext(btn, true);
+
+            if (okCount >= 3) {
+                setTimeout(() => showTransitionPopup(mode, 'upgrade'), 800);
+                pState[mode].window = []; 
+            }
+        } else {
+            if (pState[mode].currentAttempt === 0) {
+                pState[mode].window.push(false);
+                if (pState[mode].window.length > 4) pState[mode].window.shift();
+                const errCount = pState[mode].window.filter(x => !x).length;
+
+                if (errCount >= 3) {
+                    msg.innerText = `❌ 答錯了！正確答案：x ${pState[mode].prob.solOp} ${pState[mode].prob.solX}`;
+                    msg.className = `msg-box wrong-bg`;
+                    msg.classList.remove('hidden');
+                    
+                    pState[mode].isWaitingNext = true;
+                    toggleInputs('practice', true);
+                    toggleButtonToNext(btn, true);
+                    setTimeout(() => showTransitionPopup(mode, 'downgrade'), 800);
+                    pState[mode].window = []; 
+                    return;
+                }
+
+                pState[mode].currentAttempt++;
+                msg.innerHTML = "💡 <b>答案快出來了！</b><br>請拿計算紙，重新檢查一次『移項』與『合併』的步驟喔。";
+                msg.className = `msg-box wrong-bg`;
+                msg.classList.remove('hidden');
+                document.getElementById('practice-hint-btn').classList.remove('hidden');
+                
+            } else if (pState[mode].currentAttempt === 1) {
+                pState[mode].currentAttempt++;
+                showHint(); 
+                
+            } else {
+                pState[mode].currentAttempt++;
+                
+                msg.innerHTML = `
+                    ❌ <b>還是答錯囉！</b><br>
+                    正確答案是：<b style="font-size:1.2rem;">x ${pState[mode].prob.solOp} ${pState[mode].prob.solX}</b>
+                    <hr style="border:0; border-top:1px dashed #ccc; margin: 12px 0;">
+                    <span style="color:#555; font-size:0.95rem; line-height:1.6; display:block;">
+                        📝 <b>詳細計算過程：</b><br>
+                        ${pState[mode].prob.stepsHTML}
+                    </span>
+                `;
+                msg.className = `msg-box wrong-bg`;
+                msg.classList.remove('hidden');
+                document.getElementById('practice-hint-btn').classList.add('hidden');
+
+                pState[mode].isWaitingNext = true;
+                toggleInputs('practice', true);
+                toggleButtonToNext(btn, true);
+            }
+        }
+    }
+
+    function showHint() {
+        const mode = pState.currentMode;
+        const uOp = document.getElementById('practice-op').value;
+        const rawVal = parseInt(document.getElementById('practice-val').value);
+        
+        // 🌟 正負號邏輯
+        const sign = parseInt(document.getElementById('practice-sign').value);
+        const uVal = sign * rawVal;
+
+        const msg = document.getElementById('practice-msg');
+
+        const opOk = (uOp === pState[mode].prob.solOp);
+        const valOk = (uVal === pState[mode].prob.solX);
+
+        let hintText = "";
+        if (opOk && !valOk) {
+            hintText = "不等號方向選對了！但右邊的『數字』不太對。<br>👉 請檢查：數字移項搬家時，有沒有記得『轉換正負號』呢？";
+        } else if (!opOk && valOk) {
+            hintText = "數字算對了，基本功很扎實！<br>👉 請檢查：在不等式的運算規則中，遇到什麼特殊情況時，不等號的方向必須『轉向』呢？";
+        } else {
+            hintText = "我們把步驟拆開來檢查：<br>1. 移項：數字搬家時，正負號有沒有算錯？<br>2. 轉向：最後除以 x 的係數時，如果是負數，不等號有沒有跟著轉向？";
+        }
+
+        msg.innerHTML = `💡 <b>精準偵錯：</b><br>${hintText}`;
+        msg.className = `msg-box wrong-bg`;
+        msg.classList.remove('hidden');
+    }
+
+    function showTransitionPopup(mode, type) {
+        const modal = document.getElementById('transition-modal');
+        const actionBtn = document.getElementById('transition-action-btn');
+        const title = document.getElementById('transition-title');
+        const text = document.getElementById('transition-text');
+        const iconContainer = document.getElementById('transition-icon');
+        const mapInfo = levelMap[mode];
+        const contentBox = document.getElementById('transition-content-box');
+
+        contentBox.classList.remove('box-shake');
+
+        if (type === 'upgrade') {
+            iconContainer.innerHTML = `<span class="stamp-badge">🏅</span>`;
+            setTimeout(() => { contentBox.classList.add('box-shake'); }, 10);
+
+            if (mapInfo.next === 'lobby') {
+                title.innerText = "勇者！挑戰巔峰成功";
+                text.innerText = "你已精通最難的不等式挑戰，是否要回到大廳休息？";
+                actionBtn.innerText = "回到大廳";
+            } else {
+                title.innerText = "太厲害了！";
+                text.innerText = `看來這關對你來說太簡單了，要晉級到「${mapInfo.nextName}」嗎？`;
+                actionBtn.innerText = `晉級${mapInfo.nextName}`;
+            }
+            actionBtn.style.background = "var(--primary)";
+            actionBtn.onclick = () => { modal.classList.add('hidden'); if(mapInfo.next==='lobby') goHome(); else openGame(mapInfo.next); };
+        } else {
+            iconContainer.innerHTML = `<span style="font-size:50px;">📉</span>`;
+            title.innerText = "遇到瓶頸了嗎？";
+            if (mapInfo.prev === 'lobby') {
+                text.innerText = "看來這關目前有點挑戰，要不要先回到遊戲中遊玩放鬆暖身一下？";
+                actionBtn.innerText = "回到遊戲遊玩";
+            } else {
+                text.innerText = `看來這關目前有點挑戰，要不要先退回「${mapInfo.prevName}」暖身一下？`;
+                actionBtn.innerText = `退回${mapInfo.prevName}`;
+            }
+            actionBtn.style.background = "var(--warning)";
+            actionBtn.onclick = () => { modal.classList.add('hidden'); if(mapInfo.prev==='lobby') goHome(); else openGame(mapInfo.prev); };
+        }
+        modal.classList.remove('hidden');
+    }
+
+    function closeTransition() {
+        document.getElementById('transition-modal').classList.add('hidden');
+    }
+
+    function toggleInputs(prefix, disabled) {
+        document.getElementById(`${prefix}-op`).disabled = disabled;
+        document.getElementById(`${prefix}-sign`).disabled = disabled;
+        document.getElementById(`${prefix}-val`).disabled = disabled;
+    }
+    
+    function toggleButtonToNext(btn, isNext) {
+        btn.innerText = isNext ? "下一題" : "回答";
+        if(isNext) btn.classList.add('next-mode'); else btn.classList.remove('next-mode');
+    }
+
+    function resetDiag() {
+        diagState.window = []; diagState.history = []; diagState.passed.clear(); diagState.failed.clear();
+        diagState.isWaitingNext = false;
+        diagState.askCount = 0; 
+        diagState.usedQ = []; 
+        document.getElementById('diag-setup').classList.remove('hidden');
+        document.getElementById('diag-quiz').classList.add('hidden');
+        document.getElementById('diag-report').classList.add('hidden');
+    }
+    
+    function startDiag(lvl) {
+        diagState.lvl = lvl; 
+        diagState.isWaitingNext = false;
+        diagState.askCount = 0; 
+        diagState.usedQ = []; 
+        document.getElementById('diag-setup').classList.add('hidden');
+        document.getElementById('diag-quiz').classList.remove('hidden');
+        toggleInputs('diag', false);
+        toggleButtonToNext(document.getElementById('diag-btn'), false);
+        nextDiagProb();
+    }
+    
+    function nextDiagProb() {
+        const lvl = diagState.lvl; 
+        let prob = {};
+        
+        const win = diagState.window;
+        _isEasier = (win.length > 0 && win[win.length - 1] === false);
+
+        const eqBox = document.getElementById('diag-eq');
+        eqBox.className = "eq-display";
+        if (isOneStepFromUpgrade(diagState.window)) {
+            eqBox.classList.add('combo-glow-2');
+        }
+
+        diagState.askCount++;
+
+        const mode = lvl === 1 ? 'base' : (lvl === 2 ? 'adv' : 'chal');
+        const bank = qBanks[mode];
+
+        if (diagState.askCount <= 3) {
+            let available = bank.map((_, i) => i).filter(i => !diagState.usedQ.includes(i));
+            if (available.length === 0) available = bank.map((_, i) => i);
+            let idx = available[Math.floor(Math.random() * available.length)];
+            diagState.usedQ.push(idx);
+            prob = bank[idx].getOriginal();
+        } else {
+            const template = bank[Math.floor(Math.random() * bank.length)];
+            prob = template.getVariation();
+        }
+
+        diagState.prob = prob;
+        eqBox.innerHTML = prob.eq;
+        document.getElementById('diag-lvl-label').innerText = lvl;
+        
+        document.getElementById('diag-val').value = '';
+        document.getElementById('diag-sign').value = '1';
+        
+        renderDiagDots();
+    }
+    
+    function submitDiag() {
+        const btn = document.getElementById('diag-btn'); 
+        const msg = document.getElementById('diag-trans-msg');
+        
+        if (diagState.isWaitingNext) {
+            diagState.isWaitingNext = false; 
+            msg.classList.add('hidden'); 
+            toggleInputs('diag', false); 
+            toggleButtonToNext(btn, false);
+            
+            const okC = diagState.window.filter(x=>x).length;
+            const errC = diagState.window.filter(x=>!x).length; 
+            
+            if (okC >= 3) {
+                diagState.passed.add(diagState.lvl);
+                if (diagState.lvl === 3) {
+                    finishDiag(); 
+                } else { 
+                    if (diagState.failed.has(diagState.lvl + 1)) {
+                        finishDiag(); 
+                    } else {
+                        diagState.lvl++; 
+                        diagState.window = []; 
+                        diagState.askCount = 0; 
+                        diagState.usedQ = []; 
+                        alert(`🌟 表現優異！系統將為您提升至第 ${diagState.lvl} 層次繼續挑戰！`);
+                        nextDiagProb(); 
+                    }
+                }
+            } 
+            else if (errC >= 3) { 
+                diagState.failed.add(diagState.lvl);
+                if (diagState.lvl === 1) {
+                    finishDiag(); 
+                } else {
+                    if (diagState.passed.has(diagState.lvl - 1)) {
+                        finishDiag(); 
+                    } else {
+                        diagState.lvl--; 
+                        diagState.window = []; 
+                        diagState.askCount = 0; 
+                        diagState.usedQ = []; 
+                        alert(`📉 遇到一點小挑戰！系統為您動態調整至第 ${diagState.lvl} 層次。`);
+                        nextDiagProb(); 
+                    }
+                }
+            } 
+            else { 
+                nextDiagProb(); 
+            }
+            return;
+        }
+        
+        const uOp = document.getElementById('diag-op').value; 
+        const rawVal = parseInt(document.getElementById('diag-val').value);
+        
+        if (isNaN(rawVal)) {
+            msg.innerText = "⚠️ 請先輸入數字喔！";
+            msg.className = 'msg-box wrong-bg';
+            msg.classList.remove('hidden');
+            return;
+        }
+
+        // 🌟 正負號邏輯
+        const sign = parseInt(document.getElementById('diag-sign').value);
+        const uVal = sign * rawVal;
+
+        const isOk = (uOp === diagState.prob.solOp && uVal === diagState.prob.solX);
+        
+        diagState.history.push({ 
+            lvl: diagState.lvl, 
+            q: diagState.prob.eq, 
+            ua: `x ${uOp} ${uVal}`, 
+            ca: `x ${diagState.prob.solOp} ${diagState.prob.solX}`, 
+            correct: isOk 
+        });
+        
+        diagState.window.push(isOk); if (diagState.window.length > 4) diagState.window.shift();
+        renderDiagDots();
+        
+        msg.innerHTML = isOk ? "✅ <b>答對了！</b>" : `❌ 正確答案：x ${diagState.prob.solOp} ${diagState.prob.solX}`;
+        msg.className = `msg-box ${isOk ? 'correct-bg' : 'wrong-bg'}`; 
+        msg.style.textAlign = "center";
+        msg.classList.remove('hidden');
+        
+        const eqBox = document.getElementById('diag-eq');
+        eqBox.className = "eq-display";
+        if (isOneStepFromUpgrade(diagState.window)) {
+            eqBox.classList.add('combo-glow-2');
+        }
+
+        diagState.isWaitingNext = true; 
+        toggleInputs('diag', true); 
+        toggleButtonToNext(btn, true);
+    }
+    
+    function renderDiagDots() {
+        const c = document.getElementById('diag-dots'); c.innerHTML = '';
+        for (let i = 0; i < 4; i++) {
+            const d = document.createElement('div'); d.className = 'dot' + (diagState.window[i] === true ? ' correct' : (diagState.window[i] === false ? ' wrong' : ''));
+            c.appendChild(d);
+        }
+    }
+    
+    function finishDiag() {
+        document.getElementById('diag-quiz').classList.add('hidden');
+        const r = document.getElementById('diag-report'); 
+        r.classList.remove('hidden');
+        
+        let badgeTitle = "初探新手";
+        let rankNum = 4;
+        let statusText = "移項法則和同類項合併還不太熟練喔！遇到未知數或數字搬家時，容易忘記變號（加變減、減變加）。這是最需要花時間適應的基礎，別灰心。";
+        let adviceText = "建議先到「貪吃的魔法貓」遊戲中，重新找回移項與計算的手感，之後再回來挑戰「基礎關」。穩紮穩打，你一定行！";
+        let isErr = true;
+
+        if (diagState.passed.has(3)) { 
+            badgeTitle = "挑戰大師"; rankNum = 1;
+            statusText = "恭喜你！不論是複雜的去分母、隱藏括號陷阱，或是繁瑣的小數化簡，都已經難不倒你。你的代數運算能力非常扎實，完全掌握了這個單元的精髓！";
+            adviceText = "你已經是解一元一次不等式的運算高手！建議你可以開始挑戰更進階的「生活情境應用問題」，將數學轉化為解決問題的工具；或是充滿自信地前往學習「下一個數學單元」囉！";
+            isErr = false; 
+        } else if (diagState.passed.has(2)) { 
+            badgeTitle = "推理高手"; rankNum = 2;
+            statusText = "太棒了，變號陷阱已經難不倒你！目前只差在處理「括號分配律」、「小數」或是「異分母分數」時，容易因為計算步驟變多，而在去括號或去分母時忘記變號。";
+            adviceText = "建議複習習作中的分數與括號題型，特別留意分數前面有負號時的「隱藏括號」陷阱。確認計算細節都沒問題後，推薦你前往「挑戰關」拿下完全制霸！";
+            isErr = false; 
+        } else if (diagState.passed.has(1)) { 
+            badgeTitle = "新星學徒"; rankNum = 3;
+            statusText = "你已掌握基礎的移項法則！但在處理進階題型時，特別是當「未知數 x 前面的數字是負數」時，常常會忘記改變不等號的方向。";
+            adviceText = "建議先翻閱課本例題，專注複習「同乘或同除以負數，不等號必須轉向」這個唯一且最重要的規則。觀念釐清後，請前往「進階關」磨練，多點細心就能通關！";
+            isErr = false; 
+        }
+
+        let badgeHTML = `<div class="stamp-badge" style="margin-bottom: 25px;"><div class="diag-badge rank-${rankNum}">${rankNum}</div></div>`;
+
+        r.innerHTML = `
+            <div style="background:#f4f7f9; padding:20px; border-radius:12px; margin-bottom:20px; text-align:center;">
+                <strong>1. 評定等級：</strong><br><br>${badgeHTML}<br><span style="font-size:1.6rem; color:var(--primary); font-weight:bold;">${badgeTitle}</span>
+            </div>
+            <div style="margin-bottom:20px;">
+                <strong>2. 作答紀錄：</strong>
+                <div class="table-responsive">
+                    <table>
+                        <tr><th>題目</th><th>你的答案</th><th>正確答案</th></tr>
+                        ${diagState.history.map(h => `<tr><td><div style="font-size:0.9rem; min-width:120px;">${h.q}</div></td><td style="color:${h.correct?'#2e7d32':'#c62828'}; font-weight:bold;">${h.ua}</td><td>${h.ca}</td></tr>`).join('')}
+                    </table>
+                </div>
+            </div>
+            <div class="${isErr ? 'failure-box' : 'advice-box'}">
+                <strong style="color:var(--dark); font-size:1.1rem;">📊 目前的學習狀況：</strong><br>
+                <p style="margin-top:8px; margin-bottom:15px; line-height: 1.6;">${statusText}</p>
+                <strong style="color:var(--dark); font-size:1.1rem;">💡 學習建議：</strong><br>
+                <p style="margin-top:8px; margin-bottom:0; line-height: 1.6;">${adviceText}</p>
+            </div>
+            <button onclick="goHome()" class="lvl-btn" style="background:var(--primary); margin-top: 15px;">回到大廳</button>
+        `;
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            const modal = document.getElementById('transition-modal');
+            if (!modal.classList.contains('hidden')) return;
+
+            const practiceModule = document.getElementById('practice-module');
+            if (!practiceModule.classList.contains('hidden')) {
+                e.preventDefault(); 
+                submitPractice();
+                const mode = pState.currentMode;
+                if (!pState[mode].isWaitingNext) {
+                    setTimeout(() => document.getElementById('practice-val').focus(), 50);
+                }
+                return;
+            }
+
+            const diagModule = document.getElementById('diag-module');
+            const diagQuiz = document.getElementById('diag-quiz');
+            if (!diagModule.classList.contains('hidden') && !diagQuiz.classList.contains('hidden')) {
+                e.preventDefault();
+                submitDiag();
+                if (!diagState.isWaitingNext) {
+                    setTimeout(() => document.getElementById('diag-val').focus(), 50);
+                }
+                return;
+            }
+        }
+    });
+
+    const spContainer = document.getElementById('sp-container');
+    const spHeader = document.getElementById('sp-header');
+    const spCanvas = document.getElementById('sp-canvas');
+    const spCtx = spCanvas.getContext('2d');
+    
+    let isDrawing = false;
+    let currentSpTool = 'pen';
+    let isDragging = false;
+    let dragStartX, dragStartY, initialLeft, initialTop;
+
+    function toggleSp() {
+        spContainer.classList.toggle('hidden');
+    }
+
+    function setSpTool(tool) {
+        currentSpTool = tool;
+        document.getElementById('sp-pen').classList.remove('active');
+        document.getElementById('sp-eraser').classList.remove('active');
+        document.getElementById('sp-' + tool).classList.add('active');
+    }
+
+    function clearSp() {
+        spCtx.clearRect(0, 0, spCanvas.width, spCanvas.height);
+    }
+
+    spCtx.lineCap = 'round';
+    spCtx.lineJoin = 'round';
+
+    function getCanvasPos(e) {
+        const rect = spCanvas.getBoundingClientRect();
+        const clientX = e.clientX || (e.touches ? e.touches[0].clientX : 0);
+        const clientY = e.clientY || (e.touches ? e.touches[0].clientY : 0);
+        const scaleX = spCanvas.width / rect.width;
+        const scaleY = spCanvas.height / rect.height;
+        return {
+            x: (clientX - rect.left) * scaleX,
+            y: (clientY - rect.top) * scaleY
+        };
+    }
+
+    function startDraw(e) {
+        isDrawing = true;
+        const pos = getCanvasPos(e);
+        spCtx.beginPath();
+        spCtx.moveTo(pos.x, pos.y);
+        draw(e);
+    }
+
+    function draw(e) {
+        if (!isDrawing) return;
+        e.preventDefault(); 
+        const pos = getCanvasPos(e);
+        
+        spCtx.globalCompositeOperation = currentSpTool === 'eraser' ? 'destination-out' : 'source-over';
+        spCtx.lineWidth = currentSpTool === 'eraser' ? 40 : 4; 
+        spCtx.strokeStyle = '#2c3e50';
+
+        spCtx.lineTo(pos.x, pos.y);
+        spCtx.stroke();
+    }
+
+    function endDraw() {
+        isDrawing = false;
+        spCtx.beginPath();
+    }
+
+    spCanvas.addEventListener('mousedown', startDraw);
+    spCanvas.addEventListener('mousemove', draw);
+    spCanvas.addEventListener('mouseup', endDraw);
+    spCanvas.addEventListener('mouseout', endDraw);
+
+    spCanvas.addEventListener('touchstart', startDraw, { passive: false });
+    spCanvas.addEventListener('touchmove', draw, { passive: false });
+    spCanvas.addEventListener('touchend', endDraw);
+
+    function dragStart(e) {
+        if(e.target.tagName === 'BUTTON') return; 
+        isDragging = true;
+        dragStartX = e.clientX || e.touches[0].clientX;
+        dragStartY = e.clientY || e.touches[0].clientY;
+        initialLeft = spContainer.offsetLeft;
+        initialTop = spContainer.offsetTop;
+    }
+
+    function drag(e) {
+        if(!isDragging) return;
+        e.preventDefault();
+        const clientX = e.clientX || e.touches[0].clientX;
+        const clientY = e.clientY || e.touches[0].clientY;
+        spContainer.style.left = (initialLeft + clientX - dragStartX) + 'px';
+        spContainer.style.top = (initialTop + clientY - dragStartY) + 'px';
+    }
+
+    function dragEnd() {
+        isDragging = false;
+    }
+
+    spHeader.addEventListener('mousedown', dragStart);
+    document.addEventListener('mousemove', drag);
+    document.addEventListener('mouseup', dragEnd);
+    
+    // 將手機版觸控滑動改為更安全的方式，避免攔截下拉選單點擊
+    spHeader.addEventListener('touchstart', dragStart, { passive: false });
+    
+    // === 修改部分：加入 target 判斷白名單 ===
+    document.addEventListener('touchmove', function(e) {
+        if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
+        
+        if (isDragging) {
+            e.preventDefault();
+            drag(e);
+        }
+    }, { passive: false });
+    // =====================================
+    
+    document.addEventListener('touchend', dragEnd);
+
+</script>
+</body>
+</html>
