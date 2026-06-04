@@ -50,8 +50,8 @@
         
         .input-group { display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
         
-        /* === 修改部分：拆開 select 與 input[type="number"] 的 text-align 設定 === */
-        select, input[type="number"] { 
+        /* === 針對 Input 的樣式 === */
+        input[type="number"] { 
             padding: 10px; 
             font-size: 1.3rem; 
             border: 2px solid #e0e0e0; 
@@ -59,22 +59,36 @@
             outline: none; 
             background: white; 
             color: var(--dark);
-            transition: 0.2s; 
-            touch-action: manipulation;
-        }
-        select:disabled, input[type="number"]:disabled { background: #f0f0f0; color: #888; cursor: not-allowed; border-color: #ddd; }
-        
-        select { 
-            cursor: pointer; 
-            text-align: left; /* Android 修復關鍵 */
-            padding: 10px 15px;
-        }
-        input[type="number"] { 
             width: 100px; 
             cursor: text; 
             text-align: center; 
+            transition: 0.2s; /* 輸入框保留動畫沒問題 */
+            touch-action: manipulation;
         }
-        /* ======================================================================= */
+
+        /* === 針對 Select 的樣式 (Android 解藥) === */
+        select { 
+            padding: 10px 15px;
+            font-size: 1.3rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            background: white;
+            color: var(--dark);
+            cursor: pointer;
+            text-align: left !important;      /* 強制靠左 */
+            text-align-last: left !important;
+            -webkit-appearance: menulist !important; /* 強制呼叫系統原生選單 */
+            appearance: menulist !important;
+            touch-action: manipulation;
+            /* ❌ 絕對不能加上 transition，會導致安卓選單閃退 */
+        }
+
+        select:disabled, input[type="number"]:disabled { 
+            background: #f0f0f0; 
+            color: #888; 
+            cursor: not-allowed; 
+            border-color: #ddd; 
+        }
 
         .submit-btn { padding: 10px 24px; background: var(--dark); color: white; border: none; border-radius: 12px; cursor: pointer; font-size: 1.1rem; font-weight: bold; box-shadow: 0 4px 0 #1a252f; transition: 0.2s; min-width: 100px; height: 50px; }
         .submit-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #1a252f; }
@@ -988,6 +1002,7 @@
     spCanvas.addEventListener('touchmove', draw, { passive: false });
     spCanvas.addEventListener('touchend', endDraw);
 
+    // ================= 拖曳功能優化版 =================
     function dragStart(e) {
         if(e.target.tagName === 'BUTTON') return; 
         isDragging = true;
@@ -995,11 +1010,14 @@
         dragStartY = e.clientY || e.touches[0].clientY;
         initialLeft = spContainer.offsetLeft;
         initialTop = spContainer.offsetTop;
+
+        // 💡 關鍵：只有在「開始拖曳」時，才臨時把觸控監聽器掛到 document 上
+        document.addEventListener('touchmove', handleDragMove, { passive: false });
     }
 
-    function drag(e) {
+    function handleDragMove(e) {
         if(!isDragging) return;
-        e.preventDefault();
+        e.preventDefault(); // 阻擋畫面跟著滾動
         const clientX = e.clientX || e.touches[0].clientX;
         const clientY = e.clientY || e.touches[0].clientY;
         spContainer.style.left = (initialLeft + clientX - dragStartX) + 'px';
@@ -1007,27 +1025,18 @@
     }
 
     function dragEnd() {
-        isDragging = false;
+        if (isDragging) {
+            isDragging = false;
+            // 💡 關鍵：拖曳結束後，立刻把 document 上的監聽器拔除，把控制權還給原生瀏覽器
+            document.removeEventListener('touchmove', handleDragMove, { passive: false });
+        }
     }
 
     spHeader.addEventListener('mousedown', dragStart);
-    document.addEventListener('mousemove', drag);
+    document.addEventListener('mousemove', handleDragMove);
     document.addEventListener('mouseup', dragEnd);
     
-    // 將手機版觸控滑動改為更安全的方式，避免攔截下拉選單點擊
     spHeader.addEventListener('touchstart', dragStart, { passive: false });
-    
-    // === 修改部分：加入 target 判斷白名單 ===
-    document.addEventListener('touchmove', function(e) {
-        if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
-        
-        if (isDragging) {
-            e.preventDefault();
-            drag(e);
-        }
-    }, { passive: false });
-    // =====================================
-    
     document.addEventListener('touchend', dragEnd);
 
 </script>
